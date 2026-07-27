@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Quiz - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="student-dashboard.html">Dashboard</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <div class="quiz-box">
+
+        <!-- Topic Selection -->
+        <div id="topicScreen">
+          <h2>Select Quiz Topic</h2>
+          <p>Choose a topic to start your practice test!</p>
+          <div class="topic-grid">
+            <div class="topic-card" onclick="startQuiz('aptitude')">
+              <div class="topic-icon">🧮</div>
+              <h3>Aptitude</h3>
+              <p>10 Questions</p>
+            </div>
+            <div class="topic-card" onclick="startQuiz('reasoning')">
+              <div class="topic-icon">🧠</div>
+              <h3>Reasoning</h3>
+              <p>10 Questions</p>
+            </div>
+            <div class="topic-card" onclick="startQuiz('coding')">
+              <div class="topic-icon">💻</div>
+              <h3>Coding</h3>
+              <p>10 Questions</p>
+            </div>
+            <div class="topic-card" onclick="startQuiz('communication')">
+              <div class="topic-icon">🗣️</div>
+              <h3>Communication</h3>
+              <p>10 Questions</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingScreen" style="display:none; text-align:center; padding:40px;">
+          <p style="color:#2d5be3; font-size:18px;">Loading questions... ⏳</p>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" style="display:none">
+          <div class="quiz-header">
+            <span id="topicLabel"></span>
+            <span id="timer" class="timer">⏱️ 30s</span>
+          </div>
+          <div class="question-progress">
+            <span id="questionCount">Question 1 of 10</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width:10%"></div>
+          </div>
+          <div class="question-box">
+            <h3 id="questionText"></h3>
+          </div>
+          <div class="options-grid" id="optionsGrid"></div>
+          <button class="btn" id="nextBtn" onclick="nextQuestion()" style="display:none">
+            Next Question →
+          </button>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen" style="display:none">
+          <div class="result-icon">🎉</div>
+          <h2>Quiz Completed!</h2>
+          <div class="big-score" id="finalScore"></div>
+          <p id="resultMessage"></p>
+          <div style="margin-top:24px; display:flex; gap:16px; justify-content:center;">
+            <button class="btn" style="width:180px" onclick="retryQuiz()">Try Again</button>
+            <a href="student-dashboard.html" class="btn" style="width:180px; display:block; text-align:center;">Dashboard</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      let currentTopic    = "";
+      let questions       = [];        // fetched from API
+      let currentQuestion = 0;
+      let answers         = {};        // { question_id: selected_index }
+      let timerInterval;
+      let timeLeft        = 30;
+      let answered        = false;
+
+      async function startQuiz(topic) {
+        currentTopic    = topic;
+        currentQuestion = 0;
+        answers         = {};
+
+        document.getElementById("topicScreen").style.display  = "none";
+        document.getElementById("loadingScreen").style.display = "block";
+
+        try {
+          const res = await QuizAPI.questions(topic);
+          questions = res.questions;
+
+          document.getElementById("loadingScreen").style.display = "none";
+          document.getElementById("quizScreen").style.display    = "block";
+          document.getElementById("topicLabel").innerText        =
+            topic.charAt(0).toUpperCase() + topic.slice(1) + " Quiz";
+
+          showQuestion();
+        } catch (err) {
+          alert("Failed to load questions: " + err.message);
+          document.getElementById("loadingScreen").style.display = "none";
+          document.getElementById("topicScreen").style.display  = "block";
+        }
+      }
+
+      function showQuestion() {
+        answered = false;
+        const q     = questions[currentQuestion];
+        const total = questions.length;
+
+        document.getElementById("questionText").innerText   = q.question;
+        document.getElementById("questionCount").innerText  = `Question ${currentQuestion + 1} of ${total}`;
+        document.getElementById("progressFill").style.width = `${((currentQuestion + 1) / total) * 100}%`;
+        document.getElementById("nextBtn").style.display    = "none";
+
+        let optionsHTML = "";
+        q.options.forEach((opt, idx) => {
+          optionsHTML += `<button class="option-btn" onclick="selectAnswer(${idx})">${opt}</button>`;
+        });
+        document.getElementById("optionsGrid").innerHTML = optionsHTML;
+
+        startTimer();
+      }
+
+      function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 30;
+        document.getElementById("timer").innerText = `⏱️ ${timeLeft}s`;
+        timerInterval = setInterval(() => {
+          timeLeft--;
+          document.getElementById("timer").innerText = `⏱️ ${timeLeft}s`;
+          if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            if (!answered) timeUp();
+          }
+        }, 1000);
+      }
+
+      function timeUp() {
+        answered = true;
+        document.getElementById("nextBtn").style.display = "block";
+      }
+
+      function selectAnswer(index) {
+        if (answered) return;
+        answered = true;
+        clearInterval(timerInterval);
+
+        // Record answer with question ID
+        const q = questions[currentQuestion];
+        answers[q.id] = index;
+
+        const buttons = document.querySelectorAll(".option-btn");
+        buttons[index].style.background = "#e74c3c";
+        buttons[index].style.color      = "white";
+        // We don't know the correct answer yet (server-side grading)
+        // Just highlight chosen answer, reveal on result screen
+
+        buttons.forEach(btn => btn.disabled = true);
+        document.getElementById("nextBtn").style.display = "block";
+      }
+
+      function nextQuestion() {
+        currentQuestion++;
+        if (currentQuestion < questions.length) {
+          showQuestion();
+        } else {
+          submitQuiz();
+        }
+      }
+
+      async function submitQuiz() {
+        clearInterval(timerInterval);
+        document.getElementById("quizScreen").style.display   = "none";
+        document.getElementById("loadingScreen").style.display = "block";
+        document.getElementById("loadingScreen").querySelector("p").innerText = "Submitting quiz... ✅";
+
+        try {
+          const res = await QuizAPI.submit(currentTopic, answers);
+
+          document.getElementById("loadingScreen").style.display = "none";
+          document.getElementById("resultScreen").style.display  = "block";
+
+          document.getElementById("finalScore").innerText    = `${res.score}/${res.total} (${res.percent}%)`;
+          document.getElementById("resultMessage").innerText = res.message;
+        } catch (err) {
+          alert("Failed to submit quiz: " + err.message);
+        }
+      }
+
+      function retryQuiz() {
+        document.getElementById("resultScreen").style.display = "none";
+        document.getElementById("topicScreen").style.display  = "block";
+      }
+
+      function logout() {
+        clearToken();
+        window.location.href = "index.html";
+      }
+    </script>
+
+  </body>
+</html>

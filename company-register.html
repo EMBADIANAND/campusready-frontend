@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Company Register - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <div class="form-box">
+        <h2>Company Register</h2>
+        <p>Join CampusReady to find the best talent!</p>
+
+        <input type="text"     id="company_name"   placeholder="Company Name"                  class="input-field">
+        <input type="text"     id="industry"        placeholder="Industry (e.g. IT, Finance)"   class="input-field">
+        <input type="text"     id="email"           placeholder="Company Email"                 class="input-field">
+        <input type="password" id="password"        placeholder="Create Password"               class="input-field">
+        <input type="text"     id="contact_person"  placeholder="Contact Person Name"           class="input-field">
+        <input type="text"     id="phone"           placeholder="Phone Number"                  class="input-field">
+        <input type="text"     id="website"         placeholder="Company Website (optional)"    class="input-field">
+
+        <button class="btn" onclick="handleRegister()">Register Company</button>
+        <p id="errorMsg" style="color:red; font-size:14px; display:none;"></p>
+
+        <p class="register-link">Already registered?
+          <a href="company-login.html">Login here</a>
+        </p>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      async function handleRegister() {
+        const data = {
+          company_name:   document.getElementById("company_name").value.trim(),
+          industry:       document.getElementById("industry").value.trim(),
+          email:          document.getElementById("email").value.trim(),
+          password:       document.getElementById("password").value,
+          contact_person: document.getElementById("contact_person").value.trim(),
+          phone:          document.getElementById("phone").value.trim(),
+          website:        document.getElementById("website").value.trim(),
+        };
+
+        const required = ['company_name','industry','email','password','contact_person','phone'];
+        for (const field of required) {
+          if (!data[field]) {
+            showError("Please fill in all required fields!");
+            return;
+          }
+        }
+
+        try {
+          const res = await CompanyAPI.register(data);
+          alert(res.message);
+          window.location.href = "company-login.html";
+        } catch (err) {
+          showError(err.message);
+        }
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("errorMsg");
+        el.innerText     = msg;
+        el.style.display = "block";
+      }
+    </script>
+
+  </body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Student Dashboard - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="#">Profile</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+
+    <div class="dashboard-header">
+      <h2 id="welcomeName">Welcome back! 👋</h2>
+      <p id="studentCollege"></p>
+      <p>Branch: <span id="studentBranch"></span> |
+         Year: <span id="studentYear"></span> |
+         CGPA: <span id="studentCGPA"></span>
+      </p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h2>Readiness Score</h2>
+        <div class="big-score" id="readinessScore">0%</div>
+        <p>Take quizzes to improve!</p>
+      </div>
+      <div class="card">
+        <h2>College Rank</h2>
+        <div class="big-score">#--</div>
+        <p>Out of all students</p>
+      </div>
+      <div class="card">
+        <h2>Tests Completed</h2>
+        <div class="big-score" id="quizzesTaken">0</div>
+        <p>Keep practicing!</p>
+      </div>
+    </div>
+
+    <div class="skills-section">
+      <h2>Your Skill Levels</h2>
+      <div class="skill-row">
+        <span class="skill-name">Aptitude</span>
+        <div class="skill-bar"><div class="skill-fill" id="aptitudeBar" style="width:0%">0%</div></div>
+        <span id="aptitudeScore">0%</span>
+      </div>
+      <div class="skill-row">
+        <span class="skill-name">Coding</span>
+        <div class="skill-bar"><div class="skill-fill" id="codingBar" style="width:0%">0%</div></div>
+        <span id="codingScore">0%</span>
+      </div>
+      <div class="skill-row">
+        <span class="skill-name">Communication</span>
+        <div class="skill-bar"><div class="skill-fill" id="communicationBar" style="width:0%">0%</div></div>
+        <span id="communicationScore">0%</span>
+      </div>
+      <div class="skill-row">
+        <span class="skill-name">Reasoning</span>
+        <div class="skill-bar"><div class="skill-fill" id="reasoningBar" style="width:0%">0%</div></div>
+        <span id="reasoningScore">0%</span>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <h2>Quick Actions</h2>
+      <div class="cards">
+        <div class="card">
+          <h2>Take a Test</h2>
+          <p>Practice aptitude and coding tests.</p>
+          <a href="quiz.html" class="btn-small">Start Now</a>
+        </div>
+        <div class="card">
+          <h2>View Rankings</h2>
+          <p>See where you stand among peers.</p>
+          <a href="company-portal.html" class="btn-small">View</a>
+        </div>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      window.onload = async function () {
+        const token = getToken();
+        if (!token) {
+          alert("Please login first!");
+          window.location.href = "student-login.html";
+          return;
+        }
+
+        try {
+          const res = await StudentAPI.dashboard();
+          const s   = res.student;
+
+          document.getElementById("welcomeName").innerText    = `Welcome back, ${s.name}! 👋`;
+          document.getElementById("studentCollege").innerText = s.college;
+          document.getElementById("studentBranch").innerText  = s.branch;
+          document.getElementById("studentYear").innerText    = s.year;
+          document.getElementById("studentCGPA").innerText    = s.cgpa;
+
+          document.getElementById("readinessScore").innerText = (s.readiness_score || 0) + "%";
+          document.getElementById("quizzesTaken").innerText   = s.quizzes_taken || 0;
+
+          updateSkillBar("aptitudeBar",       "aptitudeScore",       s.aptitude_score       || 0);
+          updateSkillBar("codingBar",          "codingScore",         s.coding_score         || 0);
+          updateSkillBar("communicationBar",   "communicationScore",  s.communication_score  || 0);
+          updateSkillBar("reasoningBar",       "reasoningScore",      s.reasoning_score      || 0);
+
+        } catch (err) {
+          alert("Session expired. Please login again.");
+          window.location.href = "student-login.html";
+        }
+      };
+
+      function updateSkillBar(barId, scoreId, value) {
+        document.getElementById(barId).style.width = value + "%";
+        document.getElementById(barId).innerText   = value + "%";
+        document.getElementById(scoreId).innerText = value + "%";
+      }
+
+      function logout() {
+        clearToken();
+        window.location.href = "index.html";
+      }
+    </script>
+
+  </body>
+</html>

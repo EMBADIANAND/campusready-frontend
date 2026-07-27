@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Company Login - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <div class="form-box">
+        <h2>Company Login</h2>
+        <p>Welcome! Login to view student profiles.</p>
+
+        <input type="text"     id="email"    placeholder="Enter company email"  class="input-field">
+        <input type="password" id="password" placeholder="Enter your password"  class="input-field">
+
+        <button class="btn" onclick="handleLogin()">Login</button>
+        <p id="errorMsg" style="color:red; font-size:14px; display:none;"></p>
+
+        <a href="#" class="forgot">Forgot Password?</a>
+        <p class="register-link">New company? <a href="company-register.html">Register here</a></p>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      async function handleLogin() {
+        const email    = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) {
+          showError("Please fill in all fields!");
+          return;
+        }
+
+        try {
+          const res = await CompanyAPI.login({ email, password });
+
+          saveToken(res.token);
+          localStorage.setItem("userType", "company");
+          localStorage.setItem("companyName", res.company.company_name);
+
+          alert(res.message);
+          window.location.href = "company-portal.html";
+        } catch (err) {
+          showError(err.message);
+        }
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("errorMsg");
+        el.innerText      = msg;
+        el.style.display  = "block";
+      }
+    </script>
+
+  </body>
+</html>

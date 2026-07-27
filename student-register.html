@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Student Register - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <div class="form-box">
+        <h2>Student Register</h2>
+        <p>Create your account to get started!</p>
+
+        <input type="text"     id="name"     placeholder="Full Name"               class="input-field">
+        <input type="text"     id="email"    placeholder="Email Address"            class="input-field">
+        <input type="password" id="password" placeholder="Create Password"          class="input-field">
+        <input type="text"     id="college"  placeholder="College Name"             class="input-field">
+        <input type="text"     id="branch"   placeholder="Branch (e.g. CSE, ECE)"  class="input-field">
+        <input type="text"     id="year"     placeholder="Year (e.g. 3rd Year)"     class="input-field">
+        <input type="text"     id="cgpa"     placeholder="CGPA"                     class="input-field">
+
+        <button class="btn" onclick="handleRegister()">Register</button>
+        <p id="errorMsg" style="color:red; font-size:14px; display:none;"></p>
+
+        <p class="register-link">Already have an account?
+          <a href="student-login.html">Login here</a>
+        </p>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      async function handleRegister() {
+        const name     = document.getElementById("name").value.trim();
+        const email    = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const college  = document.getElementById("college").value.trim();
+        const branch   = document.getElementById("branch").value.trim();
+        const year     = document.getElementById("year").value.trim();
+        const cgpa     = document.getElementById("cgpa").value.trim();
+
+        if (!name || !email || !password || !college || !branch || !year || !cgpa) {
+          showError("Please fill in all fields!");
+          return;
+        }
+
+        try {
+          const res = await StudentAPI.register({ name, email, password, college, branch, year, cgpa });
+          alert(res.message);
+          window.location.href = "student-login.html";
+        } catch (err) {
+          showError(err.message);
+        }
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("errorMsg");
+        el.innerText = msg;
+        el.style.display = "block";
+      }
+    </script>
+
+  </body>
+</html>

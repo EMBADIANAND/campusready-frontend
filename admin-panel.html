@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Admin Panel - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="#" onclick="logout()">Logout</a>
+      </div>
+    </div>
+
+    <div class="dashboard-header">
+      <h2>Admin Panel ⚙️</h2>
+      <p>Manage students, companies and placement data.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="cards">
+      <div class="card">
+        <h2>Total Students</h2>
+        <div class="big-score" id="totalStudents">—</div>
+        <p>Registered on platform</p>
+      </div>
+      <div class="card">
+        <h2>Companies</h2>
+        <div class="big-score" id="totalCompanies">—</div>
+        <p>Actively recruiting</p>
+      </div>
+      <div class="card">
+        <h2>Quizzes Taken</h2>
+        <div class="big-score" id="totalQuizzes">—</div>
+        <p>Total attempts</p>
+      </div>
+      <div class="card">
+        <h2>Questions</h2>
+        <div class="big-score" id="totalQuestions">—</div>
+        <p>Active in question bank</p>
+      </div>
+    </div>
+
+    <!-- Student Management -->
+    <div class="skills-section">
+      <h2>Student Management</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="studentTable">
+          <tr>
+            <th>Name</th><th>Branch</th><th>CGPA</th><th>Score</th><th>Actions</th>
+          </tr>
+        </table>
+        <p id="noStudents" style="text-align:center;padding:20px;color:#666;">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Company Management -->
+    <div class="actions-section">
+      <h2>Company Management</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="companyTable">
+          <tr>
+            <th>Company</th><th>Industry</th><th>Contact Person</th><th>Actions</th>
+          </tr>
+        </table>
+        <p id="noCompanies" style="text-align:center;padding:20px;color:#666;">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Quiz Management -->
+    <div class="actions-section" style="margin:20px 40px 40px;">
+      <h2>Quiz Management 📝</h2>
+      <div style="padding:24px;">
+        <div style="background:#f0f4ff;padding:24px;border-radius:12px;margin-bottom:24px;">
+          <h3 style="color:#2d5be3;margin-bottom:16px;">Add New Question</h3>
+          <select id="questionTopic" class="input-field" style="width:200px;margin-bottom:12px;">
+            <option value="aptitude">Aptitude</option>
+            <option value="reasoning">Reasoning</option>
+            <option value="coding">Coding</option>
+            <option value="communication">Communication</option>
+          </select>
+          <input type="text" id="questionText" placeholder="Enter question"  class="input-field">
+          <input type="text" id="option1"      placeholder="Option 1"        class="input-field">
+          <input type="text" id="option2"      placeholder="Option 2"        class="input-field">
+          <input type="text" id="option3"      placeholder="Option 3"        class="input-field">
+          <input type="text" id="option4"      placeholder="Option 4"        class="input-field">
+          <select id="correctAnswer" class="input-field" style="width:200px;margin-bottom:12px;">
+            <option value="0">Option 1 is correct</option>
+            <option value="1">Option 2 is correct</option>
+            <option value="2">Option 3 is correct</option>
+            <option value="3">Option 4 is correct</option>
+          </select>
+          <button class="btn" style="width:200px;" onclick="addQuestion()">Add Question</button>
+          <p id="qError" style="color:red;font-size:14px;display:none;margin-top:8px;"></p>
+        </div>
+        <div id="questionsList"></div>
+      </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;justify-content:center;align-items:center;">
+      <div style="background:white;padding:40px;border-radius:16px;width:400px;">
+        <h2 style="color:#2d5be3;margin-bottom:20px;">Edit Student</h2>
+        <input type="hidden" id="editId">
+        <input type="text" id="editName"   placeholder="Full Name" class="input-field">
+        <input type="text" id="editBranch" placeholder="Branch"    class="input-field">
+        <input type="text" id="editYear"   placeholder="Year"      class="input-field">
+        <input type="text" id="editCgpa"   placeholder="CGPA"      class="input-field">
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button class="btn" onclick="saveEdit()">Save Changes</button>
+          <button class="btn" style="background:#666;" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      // ── Auth guard ──────────────────────────────────
+      window.onload = async function() {
+        const token    = getToken();
+        const userType = localStorage.getItem("userType");
+        if (!token || userType !== "admin") {
+          alert("Admin login required!");
+          window.location.href = "admin-login.html";
+          return;
+        }
+        await loadAll();
+      };
+
+      async function loadAll() {
+        await loadStats();
+        await loadStudents();
+        await loadCompanies();
+        await loadQuestions();
+      }
+
+      async function loadStats() {
+        try {
+          const res = await AdminAPI.stats();
+          document.getElementById("totalStudents").innerText  = res.total_students;
+          document.getElementById("totalCompanies").innerText = res.total_companies;
+          document.getElementById("totalQuestions").innerText = res.total_questions;
+          document.getElementById("totalQuizzes").innerText   = res.total_quizzes;
+        } catch(e) { console.error(e); }
+      }
+
+      async function loadStudents() {
+        try {
+          const res   = await AdminAPI.students();
+          const table = document.getElementById("studentTable");
+          const noMsg = document.getElementById("noStudents");
+
+          while (table.rows.length > 1) table.deleteRow(1);
+
+          if (!res.students || res.students.length === 0) {
+            noMsg.innerText = "No students registered yet.";
+            noMsg.style.display = "block";
+            return;
+          }
+
+          noMsg.style.display = "none";
+          res.students.forEach(s => {
+            const row = table.insertRow();
+            row.innerHTML = `
+              <td>${s.name}</td>
+              <td>${s.branch}</td>
+              <td>${s.cgpa}</td>
+              <td>${s.readiness_score || 0}%</td>
+              <td>
+                <a href="#" class="btn-edit"   onclick="editStudent(${s.id},'${s.name}','${s.branch}','${s.year}','${s.cgpa}')">Edit</a>
+                <a href="#" class="btn-delete" onclick="deleteStudent(${s.id})">Delete</a>
+              </td>`;
+          });
+        } catch(e) { console.error(e); }
+      }
+
+      async function loadCompanies() {
+        try {
+          const res   = await AdminAPI.companies();
+          const table = document.getElementById("companyTable");
+          const noMsg = document.getElementById("noCompanies");
+
+          while (table.rows.length > 1) table.deleteRow(1);
+
+          if (!res.companies || res.companies.length === 0) {
+            noMsg.innerText = "No companies registered yet.";
+            noMsg.style.display = "block";
+            return;
+          }
+
+          noMsg.style.display = "none";
+          res.companies.forEach(c => {
+            const row = table.insertRow();
+            row.innerHTML = `
+              <td>${c.company_name}</td>
+              <td>${c.industry}</td>
+              <td>${c.contact_person}</td>
+              <td><a href="#" class="btn-delete" onclick="deleteCompany(${c.id})">Delete</a></td>`;
+          });
+        } catch(e) { console.error(e); }
+      }
+
+      async function loadQuestions() {
+        try {
+          const res       = await AdminAPI.allQuestions();
+          const container = document.getElementById("questionsList");
+          const topics    = ["aptitude","reasoning","coding","communication"];
+
+          let html = "";
+          topics.forEach(topic => {
+            const qs = (res.questions || []).filter(q => q.topic === topic);
+            if (qs.length > 0) {
+              html += `<h3 style="color:#2d5be3;margin:20px 0 12px;">${topic.charAt(0).toUpperCase()+topic.slice(1)} (${qs.length})</h3>`;
+              qs.forEach((q, i) => {
+                html += `
+                  <div style="background:white;border:1px solid #dce6f7;border-radius:10px;padding:16px;margin-bottom:10px;">
+                    <p style="font-weight:bold;margin-bottom:8px;">${i+1}. ${q.question}</p>
+                    <p style="color:#666;font-size:13px;">✅ Correct: ${['option1','option2','option3','option4'][q.correct_answer].replace('option','Option ')}: ${q['option'+(q.correct_answer+1)]}</p>
+                    <a href="#" class="btn-delete" style="margin-top:8px;display:inline-block;" onclick="deleteQuestion(${q.id})">Delete</a>
+                  </div>`;
+              });
+            }
+          });
+
+          container.innerHTML = html || '<p style="color:#666;text-align:center;">No questions yet.</p>';
+        } catch(e) { console.error(e); }
+      }
+
+      async function addQuestion() {
+        const data = {
+          topic          : document.getElementById("questionTopic").value,
+          question       : document.getElementById("questionText").value.trim(),
+          option1        : document.getElementById("option1").value.trim(),
+          option2        : document.getElementById("option2").value.trim(),
+          option3        : document.getElementById("option3").value.trim(),
+          option4        : document.getElementById("option4").value.trim(),
+          correct_answer : parseInt(document.getElementById("correctAnswer").value),
+        };
+
+        if (!data.question || !data.option1 || !data.option2 || !data.option3 || !data.option4) {
+          showQError("Please fill in all fields!"); return;
+        }
+
+        try {
+          await AdminAPI.addQuestion(data);
+          ["questionText","option1","option2","option3","option4"].forEach(id => {
+            document.getElementById(id).value = "";
+          });
+          await loadQuestions();
+          await loadStats();
+          alert("Question added!");
+        } catch(e) { showQError(e.message); }
+      }
+
+      async function deleteQuestion(id) {
+        if (!confirm("Delete this question?")) return;
+        try {
+          await AdminAPI.deleteQuestion(id);
+          await loadQuestions();
+          await loadStats();
+        } catch(e) { alert(e.message); }
+      }
+
+      function editStudent(id, name, branch, year, cgpa) {
+        document.getElementById("editId").value     = id;
+        document.getElementById("editName").value   = name;
+        document.getElementById("editBranch").value = branch;
+        document.getElementById("editYear").value   = year;
+        document.getElementById("editCgpa").value   = cgpa;
+        document.getElementById("editModal").style.display = "flex";
+      }
+
+      async function saveEdit() {
+        const id = document.getElementById("editId").value;
+        const data = {
+          name  : document.getElementById("editName").value.trim(),
+          branch: document.getElementById("editBranch").value.trim(),
+          year  : document.getElementById("editYear").value.trim(),
+          cgpa  : document.getElementById("editCgpa").value.trim(),
+        };
+        try {
+          await AdminAPI.updateStudent(id, data);
+          closeModal();
+          await loadStudents();
+          alert("Student updated!");
+        } catch(e) { alert(e.message); }
+      }
+
+      async function deleteStudent(id) {
+        if (!confirm("Delete this student? This cannot be undone.")) return;
+        try {
+          await AdminAPI.deleteStudent(id);
+          await loadStudents();
+          await loadStats();
+        } catch(e) { alert(e.message); }
+      }
+
+      async function deleteCompany(id) {
+        if (!confirm("Delete this company?")) return;
+        try {
+          await AdminAPI.deleteCompany(id);
+          await loadCompanies();
+          await loadStats();
+        } catch(e) { alert(e.message); }
+      }
+
+      function closeModal() {
+        document.getElementById("editModal").style.display = "none";
+      }
+
+      function showQError(msg) {
+        const el = document.getElementById("qError");
+        el.innerText     = msg;
+        el.style.display = "block";
+      }
+
+      function logout() {
+        clearToken();
+        window.location.href = "index.html";
+      }
+    </script>
+
+  </body>
+</html>

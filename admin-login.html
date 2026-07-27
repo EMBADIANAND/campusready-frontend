@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Admin Login - CampusReady</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div class="navbar">
+      <h1 class="logo">CampusReady</h1>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+      </div>
+    </div>
+
+    <div class="form-container">
+      <div class="form-box">
+        <h2>Admin Login ⚙️</h2>
+        <p>Restricted access. Authorised personnel only.</p>
+
+        <input type="text"     id="email"    placeholder="Admin email"    class="input-field">
+        <input type="password" id="password" placeholder="Admin password" class="input-field">
+
+        <button class="btn" onclick="handleLogin()">Login</button>
+        <p id="errorMsg" style="color:red; font-size:14px; margin-top:8px; display:none;"></p>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      async function handleLogin() {
+        const email    = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) {
+          showError("Please fill in all fields!");
+          return;
+        }
+
+        try {
+          const res = await AdminAPI.login({ email, password });
+          saveToken(res.token);
+          localStorage.setItem("userType", "admin");
+          alert(res.message);
+          window.location.href = "admin-panel.html";
+        } catch (err) {
+          showError(err.message);
+        }
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("errorMsg");
+        el.innerText     = msg;
+        el.style.display = "block";
+      }
+    </script>
+
+  </body>
+</html>

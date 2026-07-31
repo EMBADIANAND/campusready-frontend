@@ -93,8 +93,9 @@
         }
 
         try {
-          const res = await StudentAPI.dashboard();
-          const s   = res.student;
+                    const res = await StudentAPI.dashboard();
+          console.log(res);
+          
 
           document.getElementById("welcomeName").innerText    = `Welcome back, ${s.name}! 👋`;
           document.getElementById("studentCollege").innerText = s.college;
@@ -110,9 +111,23 @@
           updateSkillBar("communicationBar",   "communicationScore",  s.communication_score  || 0);
           updateSkillBar("reasoningBar",       "reasoningScore",      s.reasoning_score      || 0);
 
-        } catch (err) {
-          alert("Session expired. Please login again.");
-          window.location.href = "student-login.html";
+                } catch (err) {
+          console.error("Dashboard error:", err);
+
+          // If token is really invalid
+          if (err.message && err.message.includes("401")) {
+            alert("Session expired. Please login again.");
+            clearToken();
+            window.location.href = "student-login.html";
+            return;
+          }
+
+          // Keep user on dashboard and show default values
+          document.getElementById("welcomeName").innerText = "Welcome back! 👋";
+          document.getElementById("studentCollege").innerText = "CampusReady Student";
+          document.getElementById("studentBranch").innerText = "CSE";
+          document.getElementById("studentYear").innerText = "--";
+          document.getElementById("studentCGPA").innerText = "--";
         }
       };
 

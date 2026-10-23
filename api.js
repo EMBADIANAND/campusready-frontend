@@ -15,6 +15,28 @@ function clearToken() {
   localStorage.removeItem("token");
   localStorage.removeItem("userType");
   localStorage.removeItem("userName");
+  localStorage.removeItem("studentName");
+  localStorage.removeItem("companyName");
+}
+
+// ── Page guard: only the right kind of user may open a page ──
+function requireRole(role, loginPage) {
+  if (!getToken() || localStorage.getItem("userType") !== role) {
+    alert("Please login first!");
+    window.location.href = loginPage;
+    return false;
+  }
+  return true;
+}
+
+// ── Escape text before putting it inside HTML ──
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ── Core fetch wrapper ─────────────────────
@@ -41,10 +63,16 @@ async function apiCall(endpoint, method = "GET", body = null, auth = false) {
     throw new Error("Cannot reach server. Make sure Flask is running on port 5000.");
   }
 
-  const data = await response.json();
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (parseErr) {
+    data = {};
+  }
 
-  // FIX: handle expired/invalid token globally
-  if (response.status === 401) {
+  // Expired/invalid token on a protected call -> back to home.
+  // A 401 from a login form (wrong password) is shown on the form instead.
+  if (response.status === 401 && auth) {
     clearToken();
     alert(data.error || "Session expired. Please login again.");
     window.location.href = "index.html";

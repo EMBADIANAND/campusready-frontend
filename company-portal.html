@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title>Company Portal - CampusReady</title>
     <link rel="stylesheet" href="style.css">
   </head>
@@ -54,15 +55,13 @@
 
     <script src="api.js"></script>
     <script>
+      let shortlistedIds = new Set();
+      let studentsById   = {};
+
       window.onload = async function () {
-        const token = getToken();
-        if (!token) {
-          alert("Please login as a company first!");
-          window.location.href = "company-login.html";
-          return;
-        }
-        await loadStudents();
+        if (!requireRole("company", "company-login.html")) return;
         await loadShortlisted();
+        await loadStudents();
       };
 
       async function loadStudents() {
@@ -72,10 +71,13 @@
 
         try {
           const res = await StudentAPI.all({ name, branch, year });
+          if (!res) return;
           renderStudents(res.students);
         } catch (err) {
-          document.getElementById("studentList").innerHTML =
-            `<p style="color:red; text-align:center;">${err.message}</p>`;
+          const p = document.createElement("p");
+          p.style.cssText = "color:red; text-align:center;";
+          p.textContent = err.message;
+          document.getElementById("studentList").replaceChildren(p);
         }
       }
 
@@ -87,30 +89,42 @@
           return;
         }
 
+        studentsById = {};
         let html = "";
         students.forEach(s => {
+          studentsById[s.id] = s;
+          const done = shortlistedIds.has(s.id);
           html += `
             <div class="student-card">
               <div class="student-info">
-                <h3>${s.name}</h3>
-                <p>${s.branch} • ${s.year} • CGPA: ${s.cgpa}</p>
-                <p>Aptitude: ${s.aptitude_score}% | Coding: ${s.coding_score}% | Communication: ${s.communication_score}%</p>
+                <h3>${esc(s.name)}</h3>
+                <p>${esc(s.branch)} • ${esc(s.year)} • CGPA: ${esc(s.cgpa)}</p>
+                <p>Aptitude: ${esc(s.aptitude_score)}% | Coding: ${esc(s.coding_score)}% | Communication: ${esc(s.communication_score)}% | Reasoning: ${esc(s.reasoning_score)}%</p>
               </div>
               <div class="student-score">
-                <div class="score-badge">${s.readiness_score}%</div>
+                <div class="score-badge">${esc(s.readiness_score)}%</div>
                 <p>Readiness Score</p>
-                <a href="#" class="btn-small" id="btn-${s.id}"
-                   onclick="shortlistStudent(${s.id}, '${s.name}', this)">Shortlist</a>
+                <a href="#" class="btn-small" id="btn-${Number(s.id)}" data-id="${Number(s.id)}"
+                   style="${done ? "background-color:#1D9E75; pointer-events:none;" : ""}">${done ? "Shortlisted ✓" : "Shortlist"}</a>
               </div>
             </div>
           `;
         });
         container.innerHTML = html;
+
+        container.querySelectorAll("a.btn-small").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            shortlistStudent(Number(btn.dataset.id), btn);
+          });
+        });
       }
 
-      async function shortlistStudent(studentId, name, btnEl) {
+      async function shortlistStudent(studentId, btnEl) {
+        const name = studentsById[studentId] ? studentsById[studentId].name : "Student";
         try {
-          await CompanyAPI.shortlist(studentId);
+          const res = await CompanyAPI.shortlist(studentId);
+          if (!res) return;
           btnEl.innerText = "Shortlisted ✓";
           btnEl.style.backgroundColor = "#1D9E75";
           btnEl.style.pointerEvents   = "none";
@@ -121,10 +135,23 @@
         }
       }
 
+      async function removeShortlist(studentId) {
+        try {
+          const res = await CompanyAPI.removeShortlist(studentId);
+          if (!res) return;
+          await loadShortlisted();
+          await loadStudents();
+        } catch (err) {
+          alert(err.message);
+        }
+      }
+
       async function loadShortlisted() {
         try {
           const res = await CompanyAPI.shortlisted();
+          if (!res) return;
           const container = document.getElementById("shortlistedList");
+          shortlistedIds = new Set((res.shortlisted || []).map(s => s.id));
 
           if (!res.shortlisted || res.shortlisted.length === 0) {
             container.innerHTML = '<p style="color:#666666; text-align:center;">No students shortlisted yet.</p>';
@@ -136,18 +163,27 @@
             html += `
               <div class="student-card" style="margin-bottom:12px">
                 <div class="student-info">
-                  <h3>${s.name}</h3>
-                  <p>${s.branch} • CGPA: ${s.cgpa}</p>
+                  <h3>${esc(s.name)}</h3>
+                  <p>${esc(s.branch)} • CGPA: ${esc(s.cgpa)}</p>
                 </div>
                 <div class="student-score">
-                  <div class="score-badge">${s.readiness_score}%</div>
+                  <div class="score-badge">${esc(s.readiness_score)}%</div>
                   <p>Readiness Score</p>
                   <span style="color:#1D9E75; font-weight:bold;">✓ Shortlisted</span>
+                  <a href="#" class="btn-small btn-remove" data-id="${Number(s.id)}"
+                     style="background-color:#e74c3c; margin-top:6px; display:inline-block;">Remove</a>
                 </div>
               </div>
             `;
           });
           container.innerHTML = html;
+
+          container.querySelectorAll("a.btn-remove").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              removeShortlist(Number(btn.dataset.id));
+            });
+          });
         } catch (err) {
           console.error(err);
         }

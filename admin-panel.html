@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title>Admin Panel - CampusReady</title>
     <link rel="stylesheet" href="style.css">
   </head>
@@ -117,6 +118,8 @@
 
     <script src="api.js"></script>
     <script>
+      let adminStudents = {};
+
       // ── Auth guard ──────────────────────────────────
       window.onload = async function() {
         const token    = getToken();
@@ -161,17 +164,21 @@
           }
 
           noMsg.style.display = "none";
+          adminStudents = {};
           res.students.forEach(s => {
+            adminStudents[s.id] = s;
             const row = table.insertRow();
             row.innerHTML = `
-              <td>${s.name}</td>
-              <td>${s.branch}</td>
-              <td>${s.cgpa}</td>
-              <td>${s.readiness_score || 0}%</td>
+              <td>${esc(s.name)}</td>
+              <td>${esc(s.branch)}</td>
+              <td>${esc(s.cgpa)}</td>
+              <td>${esc(s.readiness_score || 0)}%</td>
               <td>
-                <a href="#" class="btn-edit"   onclick="editStudent(${s.id},'${s.name}','${s.branch}','${s.year}','${s.cgpa}')">Edit</a>
-                <a href="#" class="btn-delete" onclick="deleteStudent(${s.id})">Delete</a>
+                <a href="#" class="btn-edit">Edit</a>
+                <a href="#" class="btn-delete">Delete</a>
               </td>`;
+            row.querySelector(".btn-edit").addEventListener("click", (e) => { e.preventDefault(); editStudent(s.id); });
+            row.querySelector(".btn-delete").addEventListener("click", (e) => { e.preventDefault(); deleteStudent(s.id); });
           });
         } catch(e) { console.error(e); }
       }
@@ -194,10 +201,11 @@
           res.companies.forEach(c => {
             const row = table.insertRow();
             row.innerHTML = `
-              <td>${c.company_name}</td>
-              <td>${c.industry}</td>
-              <td>${c.contact_person}</td>
-              <td><a href="#" class="btn-delete" onclick="deleteCompany(${c.id})">Delete</a></td>`;
+              <td>${esc(c.company_name)}</td>
+              <td>${esc(c.industry)}</td>
+              <td>${esc(c.contact_person)}</td>
+              <td><a href="#" class="btn-delete">Delete</a></td>`;
+            row.querySelector(".btn-delete").addEventListener("click", (e) => { e.preventDefault(); deleteCompany(c.id); });
           });
         } catch(e) { console.error(e); }
       }
@@ -216,15 +224,18 @@
               qs.forEach((q, i) => {
                 html += `
                   <div style="background:white;border:1px solid #dce6f7;border-radius:10px;padding:16px;margin-bottom:10px;">
-                    <p style="font-weight:bold;margin-bottom:8px;">${i+1}. ${q.question}</p>
-                    <p style="color:#666;font-size:13px;">✅ Correct: ${['option1','option2','option3','option4'][q.correct_answer].replace('option','Option ')}: ${q['option'+(q.correct_answer+1)]}</p>
-                    <a href="#" class="btn-delete" style="margin-top:8px;display:inline-block;" onclick="deleteQuestion(${q.id})">Delete</a>
+                    <p style="font-weight:bold;margin-bottom:8px;">${i+1}. ${esc(q.question)}</p>
+                    <p style="color:#666;font-size:13px;">✅ Correct: Option ${Number(q.correct_answer)+1}: ${esc(q['option'+(Number(q.correct_answer)+1)])}</p>
+                    <a href="#" class="btn-delete q-delete" data-id="${Number(q.id)}" style="margin-top:8px;display:inline-block;">Delete</a>
                   </div>`;
               });
             }
           });
 
           container.innerHTML = html || '<p style="color:#666;text-align:center;">No questions yet.</p>';
+          container.querySelectorAll(".q-delete").forEach(btn => {
+            btn.addEventListener("click", (e) => { e.preventDefault(); deleteQuestion(Number(btn.dataset.id)); });
+          });
         } catch(e) { console.error(e); }
       }
 
@@ -263,12 +274,14 @@
         } catch(e) { alert(e.message); }
       }
 
-      function editStudent(id, name, branch, year, cgpa) {
-        document.getElementById("editId").value     = id;
-        document.getElementById("editName").value   = name;
-        document.getElementById("editBranch").value = branch;
-        document.getElementById("editYear").value   = year;
-        document.getElementById("editCgpa").value   = cgpa;
+      function editStudent(id) {
+        const s = adminStudents[id];
+        if (!s) return;
+        document.getElementById("editId").value     = s.id;
+        document.getElementById("editName").value   = s.name;
+        document.getElementById("editBranch").value = s.branch;
+        document.getElementById("editYear").value   = s.year;
+        document.getElementById("editCgpa").value   = s.cgpa;
         document.getElementById("editModal").style.display = "flex";
       }
 

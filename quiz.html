@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title>Quiz - CampusReady</title>
     <link rel="stylesheet" href="style.css">
   </head>
@@ -96,6 +97,10 @@
       let timeLeft        = 30;
       let answered        = false;
 
+      window.onload = function () {
+        requireRole("student", "student-login.html");
+      };
+
       async function startQuiz(topic) {
         currentTopic    = topic;
         currentQuestion = 0;
@@ -106,7 +111,10 @@
 
         try {
           const res = await QuizAPI.questions(topic);
+          if (!res) return;
           questions = res.questions;
+          // Every question starts unanswered; a timed-out question stays null (counts as wrong)
+          questions.forEach(q => { answers[q.id] = null; });
 
           document.getElementById("loadingScreen").style.display = "none";
           document.getElementById("quizScreen").style.display    = "block";
@@ -131,11 +139,16 @@
         document.getElementById("progressFill").style.width = `${((currentQuestion + 1) / total) * 100}%`;
         document.getElementById("nextBtn").style.display    = "none";
 
-        let optionsHTML = "";
+        // Build buttons with textContent so options like "<a>" show as text
+        const grid = document.getElementById("optionsGrid");
+        grid.innerHTML = "";
         q.options.forEach((opt, idx) => {
-          optionsHTML += `<button class="option-btn" onclick="selectAnswer(${idx})">${opt}</button>`;
+          const btn = document.createElement("button");
+          btn.className   = "option-btn";
+          btn.textContent = opt;
+          btn.addEventListener("click", () => selectAnswer(idx));
+          grid.appendChild(btn);
         });
-        document.getElementById("optionsGrid").innerHTML = optionsHTML;
 
         startTimer();
       }
@@ -195,6 +208,7 @@
 
         try {
           const res = await QuizAPI.submit(currentTopic, answers);
+          if (!res) return;
 
           document.getElementById("loadingScreen").style.display = "none";
           document.getElementById("resultScreen").style.display  = "block";
@@ -203,6 +217,8 @@
           document.getElementById("resultMessage").innerText = res.message;
         } catch (err) {
           alert("Failed to submit quiz: " + err.message);
+          document.getElementById("loadingScreen").style.display = "none";
+          document.getElementById("topicScreen").style.display  = "block";
         }
       }
 

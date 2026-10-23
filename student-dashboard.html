@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <title>Student Dashboard - CampusReady</title>
     <link rel="stylesheet" href="style.css">
   </head>
@@ -85,17 +86,12 @@
     <script src="api.js"></script>
     <script>
       window.onload = async function () {
-        const token = getToken();
-        if (!token) {
-          alert("Please login first!");
-          window.location.href = "student-login.html";
-          return;
-        }
+        if (!requireRole("student", "student-login.html")) return;
 
         try {
-                    const res = await StudentAPI.dashboard();
-          console.log(res);
-          
+          const res = await StudentAPI.dashboard();
+          if (!res) return;
+          const s = res.student;
 
           document.getElementById("welcomeName").innerText    = `Welcome back, ${s.name}! 👋`;
           document.getElementById("studentCollege").innerText = s.college;
@@ -111,23 +107,13 @@
           updateSkillBar("communicationBar",   "communicationScore",  s.communication_score  || 0);
           updateSkillBar("reasoningBar",       "reasoningScore",      s.reasoning_score      || 0);
 
-                } catch (err) {
+        } catch (err) {
           console.error("Dashboard error:", err);
-
-          // If token is really invalid
-          if (err.message && err.message.includes("401")) {
-            alert("Session expired. Please login again.");
-            clearToken();
-            window.location.href = "student-login.html";
-            return;
-          }
-
-          // Keep user on dashboard and show default values
-          document.getElementById("welcomeName").innerText = "Welcome back! 👋";
-          document.getElementById("studentCollege").innerText = "CampusReady Student";
-          document.getElementById("studentBranch").innerText = "CSE";
-          document.getElementById("studentYear").innerText = "--";
-          document.getElementById("studentCGPA").innerText = "--";
+          // Show the real problem instead of made-up profile values
+          document.getElementById("welcomeName").innerText = "Could not load your dashboard: " + err.message;
+          ["studentCollege", "studentBranch", "studentYear", "studentCGPA"].forEach(id => {
+            document.getElementById(id).innerText = "--";
+          });
         }
       };
 
